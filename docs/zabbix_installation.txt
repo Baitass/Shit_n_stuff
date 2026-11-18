@@ -1,0 +1,69 @@
+# ZABBIX 8.0 LTS INSTALLATION ON ALMALINUX 10 (MariaDB + Apache)
+# Run all commands as root (sudo -i).
+
+# 1. REPOSITORY AND PACKAGES
+# Adds the Zabbix repository, installs Zabbix server, web frontend, agent2 and MariaDB, starts MariaDB.
+
+rpm -Uvh https://repo.zabbix.com/zabbix/8.0/release/rhel/10/noarch/zabbix-release-latest.el10.noarch.rpm
+dnf clean all
+dnf install -y zabbix-server-mysql zabbix-web-mysql zabbix-apache-conf zabbix-sql-scripts zabbix-selinux-policy zabbix-agent2 mariadb-server
+systemctl enable --now mariadb
+
+
+# 2. DATABASE
+# Creates the zabbix database and user (password: root). MariaDB root has no password.
+
+mysql -uroot
+
+create database zabbix character set utf8mb4 collate utf8mb4_bin;
+create user zabbix@localhost identified by 'root';
+grant all privileges on zabbix.* to zabbix@localhost;
+set global log_bin_trust_function_creators = 1;
+quit;
+
+# Imports the database schema (asks for the zabbix user password, takes a few minutes, no output).
+# Run the commands one at a time.
+
+zcat /usr/share/zabbix/sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -uzabbix -p zabbix
+mysql -uroot -e "set global log_bin_trust_function_creators = 0;"
+
+
+# 3. CONFIGURATION
+# Sets the database password in the Zabbix server config (/etc/zabbix/zabbix_server.conf -> DBPassword=root).
+
+sed -i 's/^# DBPassword=/DBPassword=root/' /etc/zabbix/zabbix_server.conf
+
+
+# 4. START SERVICES
+# Starts Zabbix server, agent2, Apache and PHP and enables them at boot.
+
+systemctl enable --now zabbix-server zabbix-agent2 httpd php-fpm
+
+
+# 5. FIREWALL
+# Opens http (port 80, web interface) and 10051/tcp (Zabbix server). Run the commands separately.
+
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-port=10051/tcp
+firewall-cmd --reload
+
+# Check (http must be listed):
+firewall-cmd --list-all
+
+
+# 6. SSL (HTTPS)
+# Installs mod_ssl (generates a self-signed certificate automatically), restarts Apache and opens https (port 443).
+# Browser will show a certificate warning (self-signed).
+
+dnf install -y mod_ssl
+systemctl restart httpd
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
+
+
+# 7. WEB INTERFACE
+# Find the VM IP:
+ip a
+# Browser: https://<VM_IP>/zabbix
+# Setup wizard database password: root
+# Login: Admin / zabbix

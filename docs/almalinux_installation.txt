@@ -1,0 +1,51 @@
+# ALMALINUX 10.3 INSTALLATION ON HYPER-V
+
+# 1. ISO
+# Download AlmaLinux x86_64 DVD or Minimal ISO:
+# https://almalinux.org/get-almalinux/
+
+
+# 2. EXTERNAL SWITCH
+# Hyper-V Manager -> Virtual Switch Manager -> New virtual network switch -> External
+# Select the Ethernet adapter, keep "Allow management operating system to share this network adapter" checked -> OK
+# External switch = Ethernet, two-way connection. Default Switch = NAT, internet via host (Wi-Fi).
+
+
+# 3. CREATE VM
+# Action -> New -> Virtual Machine
+# Generation: 2
+# Memory: 4096 MB
+# Connection: Default Switch
+# Create a virtual hard disk: 40+ GB
+# Install an operating system from a bootable image file: AlmaLinux ISO
+
+
+# 4. VM SETTINGS (VM turned off)
+# Security -> Secure Boot template: Microsoft UEFI Certificate Authority (otherwise boots to PXE instead of ISO)
+# Processor -> Number of virtual processors: 6
+# Add Hardware -> Network Adapter -> Virtual switch: External switch
+# Firmware -> DVD Drive must be first in boot order
+
+
+# 5. INSTALL
+# Connect -> Start, press any key at "Press any key to boot from CD or DVD..."
+# GRUB: Install AlmaLinux 10.3
+# Installation Summary: Installation Destination, Network & Host Name (enable network), root password / user -> Begin Installation
+# After reboot: Settings -> SCSI Controller -> DVD Drive -> None
+
+
+# 6. POST-INSTALL
+# Update system and install Hyper-V daemons (KVP, VSS, file copy):
+
+dnf update -y
+dnf install -y hyperv-daemons
+
+# Find VM IP:
+ip a
+
+
+# 7. SSH ACCESS
+# Hyper-V console does not support paste - use SSH from Windows PowerShell:
+# ssh <user>@<VM_IP>
+# Root login with password over SSH is disabled by default - create a user if only root exists:
+# useradd -m -G wheel <user> && passwd <user>

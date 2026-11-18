@@ -1,0 +1,12 @@
+[Unit]
+Description=SNMP simulator
+After=network.target
+
+[Service]
+User=nobody
+Group=nobody
+ExecStart=/opt/snmpsim/bin/snmpsim-command-responder --data-dir=/opt/snmpsim/data --agent-udpv4-endpoint=127.0.0.1:1161
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
