@@ -1,0 +1,47 @@
+# SNMP SIMULATOR (SNMPSIM) INSTALLATION ON ALMALINUX 10
+# Run all commands as root (sudo -i).
+
+# 1. PACKAGES
+# Installs git, Python pip and SNMP tools (snmpwalk), clones the lab repo.
+
+dnf install -y git python3-pip net-snmp-utils
+git clone https://github.com/Baitass/Shit_n_stuff.git /root/lab
+
+
+# 2. SNMPSIM
+# Creates a Python virtual environment and installs snmpsim into it.
+
+python3 -m venv /opt/snmpsim
+/opt/snmpsim/bin/pip install snmpsim
+
+
+# 3. SIMULATION DATA
+# Copies simulated switches. Community = file name (sw1, sw2).
+# SW-1: FW 2.4.1, port 3 down. SW-2: FW 2.3.0, ports 2 and 3 down.
+
+mkdir -p /opt/snmpsim/data
+cp /root/lab/snmpsim/*.snmprec /opt/snmpsim/data/
+chmod -R a+r /opt/snmpsim/data
+
+
+# 4. SERVICE
+# Runs snmpsim as user nobody on 127.0.0.1:1161, starts at boot.
+
+cp /root/lab/snmpsim/snmpsim.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now snmpsim
+
+
+# 5. TEST
+# First: SW-1 sysDescr and sysName. Second: SW-2 FW version (2.3.0).
+
+snmpwalk -v2c -c sw1 127.0.0.1:1161 1.3.6.1.2.1.1
+snmpwalk -v2c -c sw2 127.0.0.1:1161 1.3.6.1.2.1.47.1.1.1.1.9
+
+
+# 6. CHANGE PORT STATUS
+# Edit /opt/snmpsim/data/sw1.snmprec, line 1.3.6.1.2.1.2.2.1.8.<port>: 1 = up, 2 = down.
+# snmpsim picks up the change automatically.
+
+# Update repo files later:
+git -C /root/lab pull
